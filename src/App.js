@@ -1,6 +1,8 @@
+/* eslint-disable react/jsx-no-comment-textnodes */
 import { nanoid } from "nanoid";
 import { useEffect, useState } from "react";
 import Confetti from "react-confetti";
+import { useStopwatch } from "react-timer-hook";
 import "./App.css";
 import Die from "./Die";
 
@@ -20,6 +22,18 @@ function App() {
   const [diceNumbers, setDiceNumbers] = useState(allNewDice());
   const [tenzies, setTenzies] = useState(false);
   const [changeLang, setChangeLang] = useState(false);
+  const [score, setScore] = useState(1);
+  const {
+    totalSeconds,
+    seconds,
+    minutes,
+    hours,
+    isRunning,
+    start,
+    pause,
+    reset,
+  } = useStopwatch({ autoStart: false });
+  const [bestTime, setBestTime] = useState(999999);
 
   useEffect(() => {
     for (let i = 0; i < 10; i++) {
@@ -43,6 +57,35 @@ function App() {
     */
   }, [diceNumbers]);
 
+  useEffect(() => {
+    if (hours >= 8) {
+      pause();
+    }
+    if (tenzies) {
+      pause();
+
+      console.log(
+        "You took " +
+          hours +
+          ":" +
+          minutes +
+          ":" +
+          seconds +
+          " and " +
+          score +
+          " rolls to win"
+      );
+
+      if (totalSeconds < bestTime) {
+        setBestTime(totalSeconds);
+        console.log("It's a new record!!");
+      } else {
+        console.log("Current record: " + bestTime);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenzies, hours]);
+
   const dice = diceNumbers.map((x) => (
     <Die
       value={x.value}
@@ -58,14 +101,20 @@ function App() {
         x.isHeld ? x : { ...x, value: Math.floor(Math.random() * 6) + 1 }
       )
     );
+    setScore((oldScore) => oldScore + 1);
   }
 
   function newGame() {
     setDiceNumbers(allNewDice());
     setTenzies(false);
+    setScore(0);
+    reset();
   }
 
   function holdDice(id, event) {
+    if (!isRunning) {
+      start();
+    }
     setDiceNumbers((oldDiceNumbers) =>
       oldDiceNumbers.map((x) => (x.id === id ? { ...x, isHeld: !x.isHeld } : x))
     );
@@ -85,9 +134,13 @@ function App() {
         <div className="frame">
           <div className="innerFrame">
             {tenzies && <Confetti />}
-
             <header>
-              <span>
+              <span className="clock">
+                <span>{hours}</span>:<span>{minutes}</span>:
+                <span>{seconds}</span>
+              </span>
+
+              <span className="langSelect">
                 <p>{changeLang ? "Idioma:" : "Language:"} </p>
                 <span
                   className="fi fi-us"
@@ -101,7 +154,6 @@ function App() {
                 ></span>
               </span>
             </header>
-
             <h1 className="title">Tenzies</h1>
             {!changeLang && (
               <p className="instructions">
@@ -115,7 +167,10 @@ function App() {
                 ellos para mantener su valor.
               </p>
             )}
+
+            {/*Aca se renderizan los dados*/}
             <div className="dice-cont">{dice}</div>
+
             {tenzies && (
               <h2 className="win-text">
                 {changeLang ? "¡¡VICTORIA!!" : "YOU WON!!"}
